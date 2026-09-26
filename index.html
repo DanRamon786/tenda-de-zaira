@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A Tenda de Zaira</title>
+<meta name="description" content="Uma leitura de Tarô em 3D com a cartomante Zaira: voz, microfone e webcam. Baseado no programa TAROT (R. K. West, 1986).">
+<meta name="theme-color" content="#12070c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%234a0f24'/%3E%3Cpath d='M38 14a18 18 0 1 0 0 36 14 14 0 1 1 0-36z' fill='%23e0bb62'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"./lib/three/three.module.js","three/addons/":"./lib/three/addons/"}}</script>
+<style>
+:root{
+  --noite:#12070c; --vinho:#4a0f24; --ouro:#e0bb62; --ouro2:#b8862e; --pergaminho:#f3e6c8; --fumo:#b9a5ad;
+  --painel:rgba(18,7,12,.78); --borda:rgba(224,187,98,.35);
+  --serif:'Cormorant Garamond', Georgia, serif; --sans:Inter, system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--noite);color:var(--pergaminho);font-family:var(--sans);overflow:hidden;-webkit-tap-highlight-color:transparent}
+canvas#mundo{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none}
+button{font:inherit;color:inherit}
+.btn{background:linear-gradient(180deg,#6b1832,#4a0f24);border:1px solid var(--borda);color:var(--pergaminho);padding:11px 20px;border-radius:999px;font:600 15px/1 var(--sans);letter-spacing:.02em;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.45);transition:transform .15s, box-shadow .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(224,187,98,.18)}
+.btn:focus-visible{outline:2px solid var(--ouro);outline-offset:3px}
+.btn.fantasma{background:rgba(255,255,255,.04)}
+.btn.redondo{padding:10px 14px}
+
+/* entrada */
+#veu{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,#3a0c1d 0%,#12070c 70%);transition:opacity 1.2s}
+#veu.some{opacity:0;pointer-events:none}
+.entrada{max-width:560px;padding:32px 24px;text-align:center}
+.entrada h1{font:700 clamp(40px,8vw,64px)/1 var(--serif);color:var(--ouro);margin:0 0 6px;letter-spacing:.01em}
+.entrada .sub{font:italic 500 20px/1.4 var(--serif);color:var(--fumo);margin:0 0 26px}
+.entrada p{font-size:15px;line-height:1.6;color:#d9c9cf;margin:0 0 18px}
+.opcoes{display:grid;gap:10px;text-align:left;margin:0 auto 24px;max-width:430px}
+.opcao{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.04);border:1px solid rgba(224,187,98,.18);border-radius:14px;padding:12px 14px;cursor:pointer}
+.opcao input{margin-top:3px;accent-color:var(--ouro);width:18px;height:18px}
+.opcao b{display:block;font-weight:600;font-size:15px}
+.opcao span{font-size:13px;color:var(--fumo);line-height:1.45}
+.opcao.indisponivel{opacity:.5;cursor:default}
+#carga{height:3px;background:rgba(255,255,255,.08);border-radius:3px;margin:18px auto 0;max-width:280px;overflow:hidden}
+#carga i{display:block;height:100%;width:0;background:var(--ouro);transition:width .3s}
+#cargaTxt{font-size:12px;color:var(--fumo);margin-top:8px;min-height:1em}
+.creditos{font-size:11.5px;color:#8d7a82;margin-top:22px;line-height:1.5}
+.creditos a{color:#b9a5ad}
+
+/* HUD */
+#hud{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;z-index:10;display:flex;gap:8px;align-items:center}
+.tog{width:42px;height:42px;border-radius:50%;border:1px solid var(--borda);background:var(--painel);display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(6px)}
+.tog svg{width:20px;height:20px;fill:none;stroke:var(--pergaminho);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tog[aria-pressed=false]{opacity:.45}
+.tog[aria-pressed=false]::after{content:'';position:absolute;width:26px;height:2px;background:var(--pergaminho);transform:rotate(-45deg)}
+.tog{position:relative}
+.tog.escutando{box-shadow:0 0 0 0 rgba(224,187,98,.6);animation:pulsa 1.6s infinite}
+@keyframes pulsa{0%{box-shadow:0 0 0 0 rgba(224,187,98,.55)}70%{box-shadow:0 0 0 12px rgba(224,187,98,0)}100%{box-shadow:0 0 0 0 rgba(224,187,98,0)}}
+#espelho{width:76px;height:57px;border-radius:10px;border:1px solid var(--borda);object-fit:cover;transform:scaleX(-1);display:none;background:#000}
+#espelho.on{display:block}
+#ato{position:fixed;top:max(18px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:9;font:700 15px/1 var(--serif);letter-spacing:.3em;color:var(--ouro);text-shadow:0 2px 12px #000;pointer-events:none;white-space:nowrap}
+
+/* fala e escolhas */
+#baixo{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:0 16px max(16px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none}
+#fala{pointer-events:auto;max-width:760px;width:100%;background:var(--painel);border:1px solid var(--borda);border-radius:18px;padding:14px 20px;font:500 clamp(18px,2.3vw,22px)/1.45 var(--serif);min-height:1em;backdrop-filter:blur(8px);cursor:pointer}
+#fala:empty{display:none}
+#fala .quem{display:block;font:600 11px/1 var(--sans);letter-spacing:.2em;color:var(--ouro);margin-bottom:6px}
+#ui{pointer-events:auto;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+#ui form{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#ui input{background:rgba(18,7,12,.85);border:1px solid var(--borda);color:var(--pergaminho);border-radius:999px;padding:11px 18px;font:500 16px var(--sans);min-width:min(320px,80vw)}
+#ui input:focus{outline:2px solid var(--ouro)}
+#ouvi{font-size:12.5px;color:var(--fumo);min-height:1em;text-align:center;pointer-events:none;text-shadow:0 1px 6px #000}
+#ouvi b{color:var(--ouro);font-weight:600}
+.dica{font-size:13px;color:var(--fumo);align-self:center}
+.dica b{color:var(--ouro)}
+
+/* detalhe da carta */
+#detalhe{position:fixed;z-index:9;right:16px;top:70px;width:min(340px,40vw);background:var(--painel);border:1px solid var(--borda);border-radius:18px;padding:14px;backdrop-filter:blur(8px);display:none;max-height:calc(100vh - 260px);overflow:auto}
+#detalhe.on{display:block}
+#detalhe .fig{display:flex;gap:12px;align-items:flex-start}
+#detalhe img{width:92px;border-radius:6px;box-shadow:0 4px 14px #000;flex:none}
+#detalhe img.inv{transform:rotate(180deg)}
+#detalhe h3{font:700 22px/1.1 var(--serif);color:var(--ouro);margin:0 0 4px}
+#detalhe .pos{font-size:12px;color:var(--fumo);line-height:1.4}
+#detalhe dt{font:600 10.5px/1 var(--sans);letter-spacing:.18em;color:var(--ouro2);margin:12px 0 4px}
+#detalhe dd{margin:0;font:500 16px/1.45 var(--serif)}
+#detalhe .fonte{font-size:11px;color:#8d7a82;margin-top:10px}
+#sorteio{font:12px/1.5 ui-monospace,Menlo,monospace;color:#9d8a92;margin-top:4px}
+@media (max-width:760px), (orientation:portrait){
+  #detalhe{left:10px;right:10px;width:auto;top:62px;max-height:34vh;padding:10px 12px}
+  #detalhe img{width:62px}
+  #detalhe dd{font-size:15px}
+  #fala{padding:10px 14px}
+  #ato{font-size:12px;top:max(62px,env(safe-area-inset-top))}
+}
+@media (prefers-reduced-motion:reduce){ .tog.escutando{animation:none} }
+</style>
+</head>
+<body>
+<canvas id="mundo" aria-label="A tenda de Zaira em 3D"></canvas>
+
+<div id="veu">
+  <div class="entrada">
+    <h1>A Tenda de Zaira</h1>
+    <p class="sub">Uma cortina de veludo, velas acesas e um baralho de 1909.</p>
+    <p>Zaira vai ler o Tarô para você na Cruz Celta, com as dez cartas e os textos do programa TAROT de 1986. Converse com ela pela voz, ou use os botões.</p>
+    <div class="opcoes">
+      <label class="opcao" id="optMic"><input type="checkbox" id="querMic" checked><div><b>Microfone</b><span>Diga seu nome, peça para ela parar de embaralhar, corte o baralho falando um número, diga "continue".</span></div></label>
+      <label class="opcao" id="optCam"><input type="checkbox" id="querCam" checked><div><b>Câmera</b><span>Zaira percebe quando você se senta, acompanha seu rosto com o olhar e entende um aceno de "sim". A imagem é analisada só no seu aparelho: nada é enviado.</span></div></label>
+    </div>
+    <button class="btn" id="entrar" disabled>Preparando a tenda…</button>
+    <div id="carga"><i></i></div><div id="cargaTxt"></div>
+    <div class="creditos">Baseado no programa TAROT (R. K. West, 1986), recuperado e traduzido por Dan Ramon Ribeiro.<br>Cartas: baralho Rider-Waite-Smith de 1909 (Pamela Colman Smith), domínio público, via Wikimedia Commons.<br>Modelo 3D provisório: amostra VRM da pixiv. Funciona melhor no Chrome ou no Edge.</div>
+  </div>
+</div>
+
+<div id="hud">
+  <video id="espelho" playsinline muted aria-label="Sua imagem na câmera"></video>
+  <button class="tog" id="tMic" aria-pressed="false" title="Microfone" aria-label="Microfone"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+  <button class="tog" id="tCam" aria-pressed="false" title="Câmera" aria-label="Câmera"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/></svg></button>
+  <button class="tog" id="tVoz" aria-pressed="true" title="Voz da Zaira" aria-label="Voz da Zaira"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></button>
+  <button class="tog" id="tSom" aria-pressed="true" title="Som ambiente" aria-label="Som ambiente"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
+</div>
+<div id="ato"></div>
+<aside id="detalhe" aria-live="polite"></aside>
+<div id="baixo">
+  <div id="fala" aria-live="polite"></div>
+  <div id="ui"></div>
+  <div id="ouvi"></div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
