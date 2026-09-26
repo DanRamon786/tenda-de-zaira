@@ -8,13 +8,9 @@ import { MESA_Y } from './cena.js';
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
 
-// cores do figurino (multiplicam as texturas do modelo)
-const FIGURINO = [
-  [/top|cloth.*top|tops/i, 0x8c1c3a],
-  [/bottom/i, 0x2a1030],
-  [/shoe/i, 0x2a1a10],
-  [/hair/i, 0x5a3a34]
-];
+// cores extras do figurino (multiplicam as texturas). A Zaira atual já vem repintada no arquivo
+// modelo/zaira.vrm; deixe vazio para modelos feitos no VRoid Studio.
+const FIGURINO = [];
 
 export async function carregaZaira(cena, url, progresso) {
   const loader = new GLTFLoader();
@@ -79,34 +75,73 @@ class Zaira {
 
   repousoMao(lado) {
     const s = lado === 'left' ? 1 : -1;   // a esquerda da Zaira fica no +X do mundo
-    return V(.17 * s, MESA_Y + .035, -.47);
+    return V(.19 * s, MESA_Y + .035, -.36);
   }
 
   acessorios() {
-    // brincos de argola e uma tiara de moedas, presos ao osso normalizado da cabeça
-    // (em repouso ele fica alinhado com o mundo: +Y para cima, +Z para a frente do rosto)
-    const ouro = new THREE.MeshStandardMaterial({ color: 0xd4a649, metalness: .9, roughness: .3 });
+    // o lenço, o colar de âmbar e as pulseiras da Zaira (como no quadro de Dan).
+    // Presos aos ossos normalizados, que em repouso ficam alinhados ao mundo (+Y para cima, +Z para a frente).
     const cab = this.h('head');
-    this.vrm.scene.updateMatrixWorld(true);
-    // medidas da cabeça a partir da malha do rosto não são confiáveis; usa proporções padrão do VRoid
-    const tiara = new THREE.Group();
-    const R = .088;
-    const aro = new THREE.Mesh(new THREE.TorusGeometry(R, .0022, 6, 72, Math.PI * 1.1), ouro);
-    aro.rotation.x = Math.PI / 2; aro.rotation.z = Math.PI / 2 - Math.PI * 1.1 / 2 - Math.PI / 2 + Math.PI;
-    tiara.add(aro);
-    for (let i = -6; i <= 6; i++) {
-      const a = i * .16;
-      const moeda = new THREE.Mesh(new THREE.CylinderGeometry(.0055, .0055, .001, 14), ouro);
-      moeda.position.set(Math.sin(a) * (R + .002), -.009 - .003 * Math.cos(i * .6), Math.cos(a) * (R + .002));
-      moeda.rotation.set(Math.PI / 2, 0, 0); moeda.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), a);
-      tiara.add(moeda);
+    const tela = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; t.anisotropy = 4; return t; };
+    const estampa = tela(1024, 256, (g, w, h) => {
+      g.fillStyle = '#8e1a17'; g.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x += 64) for (let y = 12; y < h - 50; y += 56) {         // paisleys dourados
+        const xx = x + ((y / 56) % 2 ? 32 : 0);
+        g.save(); g.translate(xx, y + 20); g.rotate(.6);
+        g.fillStyle = '#c99532'; g.beginPath(); g.ellipse(0, 0, 11, 17, 0, 0, 7); g.fill();
+        g.fillStyle = '#7a1413'; g.beginPath(); g.ellipse(1, 2, 6, 10, 0, 0, 7); g.fill();
+        g.fillStyle = '#e8c267'; g.beginPath(); g.arc(1, 3, 3, 0, 7); g.fill();
+        g.strokeStyle = '#c99532'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -17); g.quadraticCurveTo(12, -26, 8, -32); g.stroke();
+        g.restore();
+        g.fillStyle = '#3a2a6a'; g.beginPath(); g.arc(xx + 24, y + 42, 3, 0, 7); g.fill();
+      }
+      // barra dourada na borda (base da textura = borda do lenço)
+      g.fillStyle = '#b8862e'; g.fillRect(0, h - 44, w, 44);
+      g.fillStyle = '#e3bd62'; for (let x = 0; x < w; x += 18) { g.beginPath(); g.moveTo(x, h - 40); g.lineTo(x + 9, h - 22); g.lineTo(x + 18, h - 40); g.fill(); }
+      g.fillStyle = '#6a1210'; g.fillRect(0, h - 10, w, 10);
+    });
+    const tecido = new THREE.MeshStandardMaterial({ map: estampa, roughness: .78, side: THREE.DoubleSide });
+    const lenco = new THREE.Group();
+    const casca = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 20, 0, Math.PI * 2, 0, 1.78), tecido);
+    casca.scale.set(.126, .124, .134); lenco.add(casca);
+    lenco.position.set(0, .108, -.012); lenco.rotation.x = -.46;
+    // nó e pontas caindo sobre o ombro esquerdo dela
+    const no = new THREE.Mesh(new THREE.SphereGeometry(.03, 20, 14), tecido);
+    no.position.set(.085, -.04, -.1); no.scale.set(1, .8, .9); lenco.add(no);
+    for (const [dx, comp, gira] of [[0, .2, .25], [.025, .16, .45]]) {
+      const ponta = new THREE.Mesh(new THREE.CylinderGeometry(.018, .006, comp, 12, 4), tecido);
+      ponta.scale.z = .35; ponta.position.set(.1 + dx, -.04 - comp / 2, -.1); ponta.rotation.z = gira; lenco.add(ponta);
     }
-    tiara.position.set(0, .115, .012); tiara.rotation.x = -.18;
-    cab.add(tiara); this.tiara = tiara;
-    for (const s of [1, -1]) {
-      const argola = new THREE.Mesh(new THREE.TorusGeometry(.011, .0018, 6, 20), ouro);
-      argola.position.set(.071 * s, .025, .0); argola.rotation.y = Math.PI / 2;
-      cab.add(argola);
+    cab.add(lenco); this.lenco = lenco;
+
+    // colar de contas de âmbar com pingente, preso ao peito alto
+    const peito = this.h('upperChest') || this.h('chest');
+    const ambar = new THREE.MeshStandardMaterial({ color: 0xc8641c, roughness: .25, metalness: .1, emissive: 0x3a1004, emissiveIntensity: .6 });
+    const ouro = new THREE.MeshStandardMaterial({ color: 0xd4a649, metalness: .9, roughness: .3 });
+    const conta = new THREE.SphereGeometry(1, 10, 8);
+    for (const [queda, n, r] of [[.05, 26, .0048], [.085, 30, .0042]]) {
+      for (let k = 0; k <= n; k++) {
+        const t = -Math.PI * .62 + (Math.PI * 1.24) * k / n;           // da lateral do pescoço até a outra
+        const f = Math.cos(t);                                           // 1 na frente
+        const b = new THREE.Mesh(conta, k % 4 === 0 ? ouro : ambar); b.scale.setScalar(r);
+        b.position.set(Math.sin(t) * (.068 + .012 * f), .13 - queda * f * f, .012 + Math.cos(t) * (.064 + queda * .45 * f));
+        peito.add(b);
+      }
+    }
+    const pingente = new THREE.Mesh(new THREE.SphereGeometry(.009, 14, 10), new THREE.MeshStandardMaterial({ color: 0x7fb6c9, roughness: .15, metalness: .2 }));
+    pingente.scale.set(.8, 1.15, .45); pingente.position.set(0, .13 - .085 - .016, .012 + .064 + .085 * .45 + .004); peito.add(pingente);
+    const aro = new THREE.Mesh(new THREE.TorusGeometry(.0105, .0016, 6, 20), ouro); aro.position.copy(pingente.position); aro.scale.set(.85, 1.15, 1); peito.add(aro);
+
+    // pulseiras nos dois pulsos
+    for (const [lado, s] of [['left', 1], ['right', -1]]) {
+      const ante = this.h(lado + 'LowerArm');
+      const mao = this.h(lado + 'Hand');
+      const dist = mao.position.length();
+      for (let k = 0; k < 4; k++) {
+        const p = new THREE.Mesh(new THREE.TorusGeometry(.03 + k * .001, k % 2 ? .0028 : .0036, 8, 28), k === 2 ? new THREE.MeshStandardMaterial({ color: 0x1f6b5a, metalness: .5, roughness: .3 }) : ouro);
+        p.rotation.y = Math.PI / 2; p.position.set(s * (dist - .018 - k * .009), 0, 0);
+        ante.add(p);
+      }
     }
   }
 

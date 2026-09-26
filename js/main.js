@@ -20,13 +20,18 @@ cena.olhar('porta', 100);
 let zaira = null, CARTAS = [];
 const aura = criaAura(cena.scene);
 const timer = new THREE.Timer(); let tempo = 0;
+const veu = document.getElementById('veu');
+const veuAberto = () => !veu.classList.contains('some');
 function quadro() {
   timer.update(); const dt = Math.min(timer.getDelta(), .05); tempo += dt;
   if (Olhos.ligado && Olhos.presente) cena.rig.paralaxe.set((Olhos.x - .5) * 2, -(Olhos.y - .5) * 2); else cena.rig.paralaxe.set(0, 0);
-  cena.atualiza(dt, tempo);
-  if (zaira) zaira.atualiza(dt, cena.camera);
-  if (aura.visible) aura.material.opacity = .75 + .25 * Math.sin(tempo * 3);
-  cena.renderer.render(cena.scene, cena.camera);
+  // com a cortina de entrada fechada, a cena não aparece: não gasta bateria desenhando
+  if (!veuAberto()) {
+    cena.atualiza(dt, tempo);
+    if (zaira) zaira.atualiza(dt, cena.camera);
+    if (aura.visible) aura.material.opacity = .75 + .25 * Math.sin(tempo * 3);
+    cena.renderer.render(cena.scene, cena.camera);
+  }
   requestAnimationFrame(quadro);
 }
 quadro();

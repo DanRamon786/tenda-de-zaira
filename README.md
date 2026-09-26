@@ -1,6 +1,10 @@
 # A Tenda de Zaira
 
+![A Zaira](img/zaira.jpg)
+
 Uma leitura de Tarô em 3D. Você entra numa tenda à luz de velas, senta-se diante da cartomante **Zaira** e ela lê as cartas para você na **Cruz Celta**: embaralha até você mandar parar, abre o baralho para você cortar, distribui as dez cartas e vira uma a uma, contando o que cada uma significa.
+
+A Zaira é a do retrato acima: cabelos cor de mel, olhos verdes, lenço vermelho e dourado, blusa branca franzida, corpete bordô bordado, colar de âmbar e pulseiras. A tenda também segue o retrato: mesa de madeira, candelabros de três velas, bola de cristal, taças, pilão de latão, lavanda, livros com cristais, lanterna e prateleira de frascos.
 
 **Acesse:** https://danramon786.github.io/tenda-de-zaira/
 
@@ -34,9 +38,13 @@ Em **Rever**, a página mostra o comando `tarotsrt V2 …` que reproduz a mesma 
 
 Os textos das 78 cartas e das dez posições vêm do programa **TAROT** (R. K. West, 1986), recuperado por engenharia reversa e traduzido por Dan Ramon Ribeiro.
 
-## Trocar a Zaira por um modelo seu
+## A Zaira em 3D, hoje e depois
 
-A Zaira de agora é um modelo de amostra. Para usar uma personagem sua:
+O modelo 3D atual parte da amostra VRM da pixiv, repintada pela ferramenta `ferramentas/repinta.py`: cabelo mel, olhos verdes, blusa branca e corpete bordado. O lenço, o colar, as pulseiras, a saia longa e a cadeira são modelados no código, em `js/zaira.js` e `js/cena.js`. O estilo continua o de anime do VRoid, mais simples que a pintura.
+
+Para uma Zaira mais fiel ao retrato, crie a personagem no VRoid Studio seguindo o retrato: cabelo longo ondulado cor de mel, olhos verdes, blusa de ombros caídos com mangas bufantes, corpete e saia longa. Os acessórios de `js/zaira.js` continuam funcionando com qualquer modelo; apague-os se o seu já tiver lenço e joias.
+
+Para usar uma personagem sua:
 
 1. Baixe o **VRoid Studio** (gratuito): https://vroid.com/en/studio
 2. Crie a personagem: cabelo, rosto, roupas (um lenço, uma saia longa, brincos...).
@@ -57,6 +65,8 @@ js/voz.js           fala (síntese) e escuta (reconhecimento) em português
 js/olhos.js         webcam: presença, olhar, sorriso, aceno
 js/motor.js         sorteio v2 (igual ao TAROTSRT.BAS)
 js/textos.js        falas da Zaira
+img/zaira.jpg       o retrato da Zaira (tela de entrada)
+ferramentas/        repinta.py: como o modelo de amostra virou a Zaira
 data/cartas.json    as 78 cartas em português
 modelo/zaira.vrm    a personagem 3D
 lib/                Three.js, three-vrm e MediaPipe (cópias locais)
@@ -68,6 +78,7 @@ Não há etapa de compilação: é um site estático. Para testar no computador,
 
 - **Cartas**: baralho Rider-Waite-Smith, ilustrado por Pamela Colman Smith (1909), em domínio público. As imagens são carregadas do [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Rider-Waite_tarot_deck). Se não carregarem, a carta aparece desenhada com o nome e o naipe.
 - **Textos**: programa TAROT © 1986 R. K. West; tradução e revisão de Dan Ramon Ribeiro.
-- **Modelo 3D provisório**: `VRM1_Constraint_Twist_Sample` © 2022 pixiv Inc. A [licença VRM 1.0](https://vrm.dev/licenses/1.0/) permite uso, modificação e redistribuição, sem crédito obrigatório.
+- **Retrato da Zaira** (`img/zaira.jpg`): Dan Ramon Ribeiro.
+- **Modelo 3D**: a partir de `VRM1_Constraint_Twist_Sample` © 2022 pixiv Inc., repintado. A [licença VRM 1.0](https://vrm.dev/licenses/1.0/) permite uso, modificação e redistribuição, sem crédito obrigatório.
 - **Three.js** (MIT), **three-vrm** (MIT, pixiv) e **MediaPipe Tasks Vision** (Apache 2.0, Google). As licenças estão em `lib/`.
 - O modelo de rosto do MediaPipe (`face_landmarker.task`) é baixado do servidor do Google na primeira vez que a câmera é ligada. Se você colocar uma cópia em `modelo/face_landmarker.task`, o site usa a cópia local.

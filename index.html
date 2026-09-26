@@ -27,9 +27,19 @@ button{font:inherit;color:inherit}
 .btn.redondo{padding:10px 14px}
 
 /* entrada */
-#veu{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,#3a0c1d 0%,#12070c 70%);transition:opacity 1.2s}
+#veu{position:fixed;inset:0;z-index:30;display:grid;place-items:center;overflow:auto;background:#12070c;transition:opacity 1.2s}
+#veu::before{content:'';position:fixed;inset:0;background:url(img/zaira.jpg) center 30%/cover no-repeat;pointer-events:none}
+#veu::after{content:'';position:fixed;inset:0;background:linear-gradient(90deg,rgba(18,7,12,.92) 0%,rgba(18,7,12,.78) 38%,rgba(18,7,12,.25) 70%,rgba(18,7,12,.55) 100%);pointer-events:none}
+#veu .entrada{position:relative;z-index:1;justify-self:start;margin-left:max(24px,6vw)}
+@media (max-width:760px), (orientation:portrait){
+  #veu::before{background-image:url(img/zaira-pequena.jpg);background-position:58% top;background-size:auto 36vh}
+  #veu::after{background:linear-gradient(180deg,rgba(18,7,12,.1) 0%,rgba(18,7,12,.5) 26%,rgba(18,7,12,.96) 36%,#12070c 100%)}
+  #veu{place-items:end center}
+  #veu .entrada{justify-self:center;margin:27vh 0 0;padding:20px 18px}
+  .entrada h1{font-size:40px} .entrada .sub{font-size:17px;margin-bottom:14px} .entrada p{font-size:14px;margin-bottom:12px} .opcao span{font-size:12px} .opcoes{margin-bottom:16px}
+}
 #veu.some{opacity:0;pointer-events:none}
-.entrada{max-width:560px;padding:32px 24px;text-align:center}
+.entrada{max-width:520px;padding:32px 24px;text-align:center}
 .entrada h1{font:700 clamp(40px,8vw,64px)/1 var(--serif);color:var(--ouro);margin:0 0 6px;letter-spacing:.01em}
 .entrada .sub{font:italic 500 20px/1.4 var(--serif);color:var(--fumo);margin:0 0 26px}
 .entrada p{font-size:15px;line-height:1.6;color:#d9c9cf;margin:0 0 18px}
@@ -100,7 +110,7 @@ button{font:inherit;color:inherit}
 <div id="veu">
   <div class="entrada">
     <h1>A Tenda de Zaira</h1>
-    <p class="sub">Uma cortina de veludo, velas acesas e um baralho de 1909.</p>
+    <p class="sub">Velas acesas, ervas secas e um baralho de 1909.</p>
     <p>Zaira vai ler o Tarô para você na Cruz Celta, com as dez cartas e os textos do programa TAROT de 1986. Converse com ela pela voz, ou use os botões.</p>
     <div class="opcoes">
       <label class="opcao" id="optMic"><input type="checkbox" id="querMic" checked><div><b>Microfone</b><span>Diga seu nome, peça para ela parar de embaralhar, corte o baralho falando um número, diga "continue".</span></div></label>
@@ -108,7 +118,7 @@ button{font:inherit;color:inherit}
     </div>
     <button class="btn" id="entrar" disabled>Preparando a tenda…</button>
     <div id="carga"><i></i></div><div id="cargaTxt"></div>
-    <div class="creditos">Baseado no programa TAROT (R. K. West, 1986), recuperado e traduzido por Dan Ramon Ribeiro.<br>Cartas: baralho Rider-Waite-Smith de 1909 (Pamela Colman Smith), domínio público, via Wikimedia Commons.<br>Modelo 3D provisório: amostra VRM da pixiv. Funciona melhor no Chrome ou no Edge.</div>
+    <div class="creditos">Baseado no programa TAROT (R. K. West, 1986), recuperado e traduzido por Dan Ramon Ribeiro.<br>Cartas: baralho Rider-Waite-Smith de 1909 (Pamela Colman Smith), domínio público, via Wikimedia Commons.<br>Retrato da Zaira: Dan Ramon Ribeiro. Modelo 3D a partir da amostra VRM da pixiv. Funciona melhor no Chrome ou no Edge.</div>
   </div>
 </div>
 
