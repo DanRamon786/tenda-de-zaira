@@ -34,9 +34,7 @@ export const Ouvido = {
       const r = new SR(); r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
       r.onresult = e => {
         for (let i = e.resultIndex; i < e.results.length; i++) {
-          const res = e.results[i]; const alts = [...res].map(a => a.transcript.trim());
-          this.ultimo = alts[0];
-          for (const f of this.ouvintes) f(alts, res.isFinal);
+          const res = e.results[i]; this.recebe([...res].map(a => a.transcript.trim()), res.isFinal);
         }
       };
       r.onstart = () => { this.respondeu = true; };
@@ -50,6 +48,20 @@ export const Ouvido = {
     }
     this.pausado = false; this.inicia(); return true;
   },
+  // Alguns navegadores mandam só resultados provisórios e demoram (ou nunca chegam) ao final.
+  // Se o texto provisório ficar parado por 900 ms, ele passa a valer como final.
+  recebe(alts, final) {
+    clearTimeout(this.estavel);
+    if (!alts[0]) return;
+    this.ultimo = alts[0];
+    if (final) {
+      if (norma(alts[0]) === this.jaValeu) { this.jaValeu = ''; return; }   // já foi entregue pelo estabilizador
+      this.jaValeu = ''; this.entrega(alts, true); return;
+    }
+    this.entrega(alts, false);
+    this.estavel = setTimeout(() => { this.jaValeu = norma(alts[0]); this.entrega(alts, true); }, 900);
+  },
+  entrega(alts, final) { for (const f of [...this.ouvintes]) f(alts, final); },
   inicia() { if (!this.rec || this.ativo || this.pausado || !this.ligado) return; try { this.rec.start(); this.ativo = true; } catch (e) { } },
   pausa() { this.pausado = true; try { this.rec?.stop(); } catch (e) { } },
   retoma() { if (!this.ligado) return; this.pausado = false; this.inicia(); },

@@ -179,7 +179,11 @@ function escolhe(opcoes, { dica = '' } = {}) {
       b.textContent = o.label; b.onclick = () => fim(o.v); box.appendChild(b);
     }
     limpaUI(); $('#ui').appendChild(box); box.querySelector('button')?.focus({ preventScroll: true });
-    const offV = Ouvido.ouve((alts, final) => { for (const o of opcoes) if (o.fala && (final || o.rapido) && contem(alts, o.fala)) { sino(880); fim(o.v); return; } });
+    const offV = Ouvido.ouve((alts, final) => {
+      for (const o of opcoes) if (o.fala && (final || o.rapido) && contem(alts, o.fala)) { sino(880); fim(o.v); return; }
+      // ouviu algo que não é nenhuma das opções: diz o que ouviu e o que pode ser dito
+      if (final) { const ex = opcoes.filter(o => o.fala).map(o => '"' + o.fala[0] + '"'); if (ex.length) ouvi('Ouvi <b>' + esc(alts[0]) + '</b>, mas não entendi. Diga ' + ex.join(' ou ') + '.', true, 6000); }
+    });
     const offO = Olhos.ouve(ev => { for (const o of opcoes) if (o.gesto === ev) { sino(880); ouvi(ev === 'sim' ? 'Vi você acenar que sim.' : 'Vi você balançar a cabeça.'); fim(o.v); return; } });
   });
 }
