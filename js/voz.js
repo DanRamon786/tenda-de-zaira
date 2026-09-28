@@ -26,7 +26,7 @@ if ('speechSynthesis' in window) { Voz.escolhe(); speechSynthesis.onvoiceschange
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 export const Ouvido = {
-  existe: !!SR, ligado: false, rec: null, pausado: true, ouvintes: new Set(), ultimo: '',
+  existe: !!SR, ligado: false, respondeu: false, ultimoErro: '', rec: null, pausado: true, ouvintes: new Set(), ultimo: '',
   liga() {
     if (!SR) return false;
     this.ligado = true;
@@ -39,8 +39,13 @@ export const Ouvido = {
           for (const f of this.ouvintes) f(alts, res.isFinal);
         }
       };
+      r.onstart = () => { this.respondeu = true; };
       r.onend = () => { this.ativo = false; if (this.ligado && !this.pausado) setTimeout(() => this.inicia(), 250); };
-      r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { this.ligado = false; this.aoNegar?.(); } };
+      r.onerror = e => {
+        this.ultimoErro = e.error;
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { this.ligado = false; this.aoNegar?.(e.error); }
+        else if (e.error !== 'no-speech' && e.error !== 'aborted') this.aoErro?.(e.error);
+      };
       this.rec = r;
     }
     this.pausado = false; this.inicia(); return true;

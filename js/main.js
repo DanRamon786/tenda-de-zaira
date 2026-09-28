@@ -84,22 +84,67 @@ $('#tVoz').onclick = () => { Voz.ligada = !Voz.ligada; marca($('#tVoz'), Voz.lig
 $('#tSom').onclick = () => { somOn = !somOn; marca($('#tSom'), somOn); if (master) master.gain.value = somOn ? .5 : 0; };
 $('#tMic').onclick = () => { if (Ouvido.ligado) { Ouvido.desliga(); marca($('#tMic'), false); $('#tMic').classList.remove('escutando'); } else ligaMic(); };
 $('#tCam').onclick = () => { if (Olhos.ligado) { Olhos.desliga(); marca($('#tCam'), false); $('#espelho').classList.remove('on'); } else ligaCam(); };
+const MSG_MIC = {
+  'not-allowed': 'O microfone foi bloqueado. Libere-o no cadeado da barra de endereço e toque no botão do microfone.',
+  'service-not-allowed': 'Este navegador não permite o reconhecimento de fala. Use o Chrome, ou os botões.',
+  'network': 'O reconhecimento de fala do navegador não conseguiu falar com o serviço dele (erro de rede). Use o Chrome, ou os botões.',
+  'audio-capture': 'Não encontrei um microfone neste aparelho, ou outro programa está usando o microfone.',
+  'language-not-supported': 'Este navegador não reconhece fala em português.',
+  'mudo': 'O reconhecimento de fala não respondeu neste navegador. Use o Chrome, ou os botões.'
+};
+const DIAG = window.__diag = [];
+function avisa(chave, texto) { DIAG.push(chave); console.warn('diagnóstico:', chave); ouvi(texto, false, 15000); }
+function desmarcaMic() { marca($('#tMic'), false); $('#tMic').classList.remove('escutando'); }
 function ligaMic() {
-  if (!Ouvido.existe) return;
-  Ouvido.aoNegar = () => { marca($('#tMic'), false); $('#tMic').classList.remove('escutando'); ouvi('O microfone foi bloqueado. Use os botões, ou libere o microfone no cadeado da barra de endereço.'); };
-  if (Ouvido.liga()) { marca($('#tMic'), true); $('#tMic').classList.add('escutando'); }
-}
-async function ligaCam() {
-  try {
-    marca($('#tCam'), true); $('#espelho').classList.add('on');
-    await Olhos.liga($('#espelho'));
-  } catch (e) {
-    console.warn(e); marca($('#tCam'), false); $('#espelho').classList.remove('on'); Olhos.desliga();
-    ouvi('Não consegui usar a câmera. A consulta segue sem ela.');
+  if (!Ouvido.existe) { avisa('mic:inexistente', 'Este navegador não reconhece fala. No Chrome, você poderá conversar com a Zaira.'); return; }
+  Ouvido.aoNegar = err => { desmarcaMic(); avisa('mic:' + err, MSG_MIC[err]); };
+  Ouvido.aoErro = err => { avisa('mic:' + err, MSG_MIC[err] || ('O microfone deu o erro "' + err + '".')); if (err === 'network' || err === 'audio-capture' || err === 'language-not-supported') { Ouvido.desliga(); desmarcaMic(); } };
+  if (Ouvido.liga()) {
+    marca($('#tMic'), true); $('#tMic').classList.add('escutando');
+    // se em 8 s o reconhecedor nunca começou a ouvir, avisa
+    setTimeout(() => { if (Ouvido.ligado && !Ouvido.respondeu) { avisa('mic:mudo', MSG_MIC.mudo); Ouvido.desliga(); desmarcaMic(); } }, 8000);
   }
 }
+const MSG_CAM = {
+  NotAllowedError: 'A câmera foi bloqueada. Libere-a no cadeado da barra de endereço e toque no botão da câmera.',
+  NotFoundError: 'Não encontrei uma câmera neste aparelho.',
+  NotReadableError: 'A câmera está sendo usada por outro programa.',
+  OverconstrainedError: 'A câmera não aceitou o tamanho de imagem pedido.'
+};
+async function ligaCam(stream) {
+  try {
+    marca($('#tCam'), true); $('#espelho').classList.add('on');
+    await Olhos.liga($('#espelho'), stream);
+  } catch (e) {
+    console.warn(e); marca($('#tCam'), false); $('#espelho').classList.remove('on'); Olhos.desliga();
+    const etapa = Olhos.etapa;
+    const texto = MSG_CAM[e.name] || (etapa === 'modelo' ? 'Não consegui carregar o reconhecimento de rosto. A consulta segue sem a câmera.'
+      : etapa === 'video' ? 'A câmera abriu, mas a imagem não começou. A consulta segue sem ela.' : 'Não consegui usar a câmera (' + (e.name || e.message) + '). A consulta segue sem ela.');
+    avisa('cam:' + etapa + ':' + (e.name || 'erro'), texto);
+  }
+}
+// pede microfone e câmera numa só permissão, um depois do outro, para não disputarem o aparelho (no celular isso falhava)
+async function ligaSensores() {
+  const querMic = $('#querMic').checked && Ouvido.existe, querCam = $('#querCam').checked && !!navigator.mediaDevices?.getUserMedia;
+  let stream = null;
+  if (navigator.mediaDevices?.getUserMedia && (querMic || querCam)) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: querMic, video: querCam ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : false });
+    } catch (e) {
+      console.warn('permissão conjunta:', e);
+      if (querMic && querCam) { try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }); } catch (e2) { avisa('cam:permissao:' + e2.name, MSG_CAM[e2.name] || 'Não consegui usar a câmera.'); } }
+      else if (querCam) avisa('cam:permissao:' + e.name, MSG_CAM[e.name] || 'Não consegui usar a câmera.');
+    }
+  }
+  // o reconhecimento de fala abre o microfone por conta própria: solta o nosso para não ocupá-lo
+  stream?.getAudioTracks().forEach(t => t.stop());
+  const video = stream?.getVideoTracks().length ? new MediaStream(stream.getVideoTracks()) : null;
+  // o microfone não espera a câmera terminar de carregar o reconhecimento de rosto
+  if (querMic) ligaMic();
+  if (querCam && video) await ligaCam(video);
+}
 let ouviTimer = 0;
-function ouvi(t, html = false) { const el = $('#ouvi'); if (html) el.innerHTML = t; else el.textContent = t; clearTimeout(ouviTimer); ouviTimer = setTimeout(() => el.textContent = '', 5000); }
+function ouvi(t, html = false, ms = 5000) { const el = $('#ouvi'); if (html) el.innerHTML = t; else el.textContent = t; clearTimeout(ouviTimer); ouviTimer = setTimeout(() => el.textContent = '', ms); }
 Ouvido.ouve((alts, fim) => { if (alts[0]) ouvi('Ouvi: <b>' + esc(alts[0]) + '</b>' + (fim ? '' : '…'), true); });
 
 // ---------- fala da Zaira ----------
@@ -384,8 +429,7 @@ btnEntrar.addEventListener('click', async () => {
   if (master && ac) master.gain.setTargetAtTime(somOn ? .5 : 0, ac.currentTime, .3);
   if (Voz.ligada && 'speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); }
   $('#veu').classList.add('some');
-  if ($('#querCam').checked) ligaCam();
-  if ($('#querMic').checked) ligaMic();
+  ligaSensores();
   zaira.aparece(); S.tiragem = [];
   roda('ENTRADA');
 });

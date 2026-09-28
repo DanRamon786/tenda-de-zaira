@@ -6,9 +6,17 @@ const MODELOS = [new URL('../modelo/face_landmarker.task', import.meta.url).href
 export const Olhos = {
   ligado: false, presente: false, x: .5, y: .5, sorriso: 0, video: null, ouvintes: new Set(),
   hist: [], ultimoGesto: 0,
-  async liga(videoEl) {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
-    videoEl.srcObject = stream; await videoEl.play(); this.video = videoEl; this.stream = stream;
+  // etapa: diz em que ponto a câmera falhou, para a mensagem de diagnóstico
+  etapa: '',
+  async liga(videoEl, streamPronto) {
+    this.etapa = 'permissao';
+    const stream = streamPronto || await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    this.etapa = 'video';
+    videoEl.muted = true; videoEl.setAttribute('playsinline', ''); videoEl.srcObject = stream; this.stream = stream;
+    // play() pode ficar pendente em alguns celulares; não espera mais que 4 s (o ciclo confere readyState)
+    await Promise.race([videoEl.play().catch(() => { }), new Promise(r => setTimeout(r, 4000))]);
+    this.video = videoEl;
+    this.etapa = 'modelo';
     const { FaceLandmarker, FilesetResolver } = await import('../lib/mediapipe/vision_bundle.mjs');
     const fs = await FilesetResolver.forVisionTasks(new URL('../lib/mediapipe/wasm', import.meta.url).href);
     let modelo = MODELOS[1];
@@ -16,7 +24,7 @@ export const Olhos = {
     const opcoes = d => ({ baseOptions: { modelAssetPath: modelo, delegate: d }, runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true });
     try { this.fl = await FaceLandmarker.createFromOptions(fs, opcoes('GPU')); }
     catch (e) { this.fl = await FaceLandmarker.createFromOptions(fs, opcoes('CPU')); }
-    this.ligado = true; this.ciclo();
+    this.etapa = 'ok'; this.ligado = true; this.ciclo();
     return true;
   },
   desliga() { this.ligado = false; this.stream?.getTracks().forEach(t => t.stop()); this.presente = false; },
